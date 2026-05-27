@@ -1,0 +1,130 @@
+{
+  "rules": [
+    {
+      "rule_id": "RULE_AL_001",
+      "rule_type": "fact_unclear",
+      "description": "事实认定不清",
+      "severity": "high",
+      "penalty": "责令重新调查",
+      "enabled": true,
+      "check_logic": "检测案卷中违法事实是否明确、具体，包含时间、地点、行为、结果等要素"
+    },
+    {
+      "rule_id": "RULE_AL_002",
+      "rule_type": "evidence_incomplete",
+      "description": "证据链不完整",
+      "severity": "high",
+      "penalty": "责令补充调查",
+      "enabled": true,
+      "check_logic": "检测事实-证据-法律依据-处罚结果是否形成完整闭环"
+    },
+    {
+      "rule_id": "RULE_AL_003",
+      "rule_type": "wrong_legal_basis",
+      "description": "处罚依据引用错误",
+      "severity": "high",
+      "penalty": "撤销处罚决定",
+      "enabled": true,
+      "check_logic": "检测处罚依据的法律条文是否准确、完整、现行有效"
+    },
+    {
+      "rule_id": "RULE_AL_004",
+      "rule_type": "unequal_penalty",
+      "description": "同案不同罚",
+      "severity": "medium",
+      "penalty": "重新裁量",
+      "enabled": true,
+      "check_logic": "检测相同或相似案件事实的处罚结果是否基本一致，偏差是否在合理范围内"
+    },
+    {
+      "rule_id": "RULE_AL_005",
+      "rule_type": "procedure_defect",
+      "description": "程序瑕疵（期限/告知/签章/送达）",
+      "severity": "medium",
+      "penalty": "补正程序",
+      "enabled": true,
+      "check_logic": "检测各程序节点是否符合法定时限、告知、签章、送达等要求"
+    },
+    {
+      "rule_id": "RULE_AL_006",
+      "rule_type": "discretion_abnormal",
+      "description": "自由裁量幅度异常",
+      "severity": "medium",
+      "penalty": "重新裁量",
+      "enabled": true,
+      "check_logic": "检测处罚幅度是否在裁量基准范围内，考虑违法情节、持续时间等因素"
+    },
+    {
+      "rule_id": "RULE_AL_007",
+      "rule_type": "document_format",
+      "description": "文书格式不规范",
+      "severity": "low",
+      "penalty": "整改",
+      "enabled": true,
+      "check_logic": "检测文书基本要素是否完整，包括案件编号、当事人信息、日期等"
+    },
+    {
+      "rule_id": "RULE_AL_008",
+      "rule_type": "evidence_insufficient",
+      "description": "证据材料不充分",
+      "severity": "medium",
+      "penalty": "补充证据",
+      "enabled": true,
+      "check_logic": "检测每项违法事实是否有至少2项不同类型证据支撑"
+    },
+    {
+      "rule_id": "RULE_AL_009",
+      "rule_type": "notice_incomplete",
+      "description": "告知程序不完整",
+      "severity": "medium",
+      "penalty": "补正告知",
+      "enabled": true,
+      "check_logic": "检测告知书是否包含当事人信息、违法事实、处罚依据、处罚内容、陈述申辩权等要素"
+    },
+    {
+      "rule_id": "RULE_AL_010",
+      "rule_type": "signature_missing",
+      "description": "文书签章缺失",
+      "severity": "low",
+      "penalty": "补正签章",
+      "enabled": true,
+      "check_logic": "检测文书是否有当事人、执法人员、负责人签章及行政机关印章"
+    }
+  ],
+  "legal_deadlines": {
+    "investigation_to_decision": 30,
+    "notice_to_decision": 3,
+    "decision_to_delivery": 7,
+    "filing_to_investigation": 7,
+    "max_extendable_days": 30
+  },
+  "discretion_benchmarks": {
+    "罚款": {
+      "min_percent": 0.5,
+      "max_percent": 2.0
+    },
+    "责令停产停业": {
+      "severity_weights": {
+        "轻微": 1,
+        "一般": 2,
+        "严重": 3
+      }
+    },
+    "吊销许可证": {
+      "severity_weights": {
+        "一般": 1,
+        "严重": 2
+      }
+    }
+  },
+  "evidence_priority": {
+    "物证": 10,
+    "书证": 9,
+    "鉴定意见": 8,
+    "勘验笔录": 7,
+    "视听资料": 6,
+    "电子数据": 5,
+    "证人证言": 4,
+    "当事人陈述": 3
+  }
+}

@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行政执法案卷合规评查与裁量偏差风险控制系统 V1.0</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #f0f2f5; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* 头部样式 */
+        .header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(26,115,232,0.3); }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        
+        /* 标签页 */
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 12px 24px; background: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .tab:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .tab.active { background: #1a73e8; color: white; }
+        
+        /* 卡片 */
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .card-title { font-size: 18px; font-weight: 600; color: #1a73e8; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e3f2fd; }
+        
+        /* 表单 */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
+        .form-group textarea { min-height: 200px; resize: vertical; font-family: inherit; }
+        
+        /* 按钮 */
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #1557b0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26,115,232,0.3); }
+        .btn-secondary { background: #e3f2fd; color: #1a73e8; }
+        .btn-secondary:hover { background: #bbdefb; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        /* 风险等级标签 */
+        .risk-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .risk-high { background: #ffebee; color: #c62828; }
+        .risk-medium { background: #fff3e0; color: #ef6c00; }
+        .risk-low { background: #e8f5e9; color: #2e7d32; }
+        
+        /* 网格布局 */
+        .grid { display: grid; gap: 20px; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        
+        /* 时间线 */
+        .timeline { position: relative; padding-left: 30px; }
+        .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e3f2fd; }
+        .timeline-item { position: relative; padding: 16px; margin-bottom: 16px; background: #f8f9fa; border-radius: 8px; }
+        .timeline-item::before { content: ''; position: absolute; left: -24px; top: 20px; width: 12px; height: 12px; border-radius: 50%; background: #1a73e8; border: 3px solid white; box-shadow: 0 0 0 3px #e3f2fd; }
+        .timeline-item.has-issue::before { background: #c62828; box-shadow: 0 0 0 3px #ffebee; }
+        .timeline-item .node-name { font-weight: 600; color: #1a73e8; margin-bottom: 4px; }
+        .timeline-item .node-content { font-size: 14px; color: #666; }
+        .timeline-item .issue-tag { display: inline-block; background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-top: 8px; }
+        
+        /* 证据链 */
+        .evidence-chain { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; padding: 20px; }
+        .chain-node { padding: 16px 24px; background: #e3f2fd; border-radius: 12px; text-align: center; min-width: 120px; }
+        .chain-node.active { background: #1a73e8; color: white; }
+        .chain-node.incomplete { background: #ffebee; color: #c62828; }
+        .chain-arrow { font-size: 24px; color: #1a73e8; }
+        
+        /* 雷达图 */
+        .radar-container { display: flex; align-items: center; justify-content: center; }
+        .radar-chart { width: 300px; height: 300px; }
+        
+        /* 列表 */
+        .issue-list { list-style: none; }
+        .issue-item { padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #1a73e8; }
+        .issue-item.high { border-left-color: #c62828; background: #ffebee; }
+        .issue-item.medium { border-left-color: #ef6c00; background: #fff3e0; }
+        .issue-item.low { border-left-color: #2e7d32; background: #e8f5e9; }
+        .issue-type { font-weight: 600; margin-bottom: 4px; }
+        .issue-message { font-size: 14px; color: #666; }
+        
+        /* 相似案例 */
+        .similar-case { padding: 16px; margin-bottom: 12px; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #1a73e8; }
+        .similar-case-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .similarity-score { font-weight: 600; color: #1a73e8; }
+        
+        /* 评分展示 */
+        .score-display { text-align: center; padding: 20px; }
+        .score-number { font-size: 48px; font-weight: 700; color: #1a73e8; }
+        .score-label { font-size: 14px; color: #666; margin-top: 8px; }
+        
+        /* 裁量基准 */
+        .benchmark-bar { height: 40px; background: #e3f2fd; border-radius: 8px; position: relative; margin: 20px 0; }
+        .benchmark-range { position: absolute; top: 0; height: 100%; background: #1a73e8; border-radius: 8px; opacity: 0.3; }
+        .benchmark-marker { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: #c62828; border-radius: 50%; border: 3px solid white; }
+        .benchmark-labels { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 8px; }
+        
+        /* 报告样式 */
+        .report-header { text-align: center; padding: 30px; background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; border-radius: 12px; margin-bottom: 24px; }
+        .report-header h2 { font-size: 24px; margin-bottom: 8px; }
+        .report-header p { opacity: 0.9; }
+        .report-section { margin-bottom: 24px; }
+        .report-section h3 { font-size: 16px; color: #1a73e8; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e3f2fd; }
+        .conclusion-box { padding: 20px; border-radius: 12px; background: #e3f2fd; border-left: 4px solid #1a73e8; }
+        .conclusion-box h4 { color: #1a73e8; margin-bottom: 8px; }
+        
+        /* 加载状态 */
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e3f2fd; border-top-color: #1a73e8; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .tabs { flex-direction: column; }
+            .tab { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 头部 -->
+            <div class="header">
+                <h1>🏛️ 行政执法案卷合规评查与裁量偏差风险控制系统 V1.0</h1>
+                <p>基于证据链闭环的行政执法案卷合规评查 | 支持裁量基准匹配 | 风险熵分级评估</p>
+            </div>
+            
+            <!-- 标签页 -->
+            <div class="tabs">
+                <button class="tab" :class="{active: activeTab === 'upload'}" @click="activeTab = 'upload'">📤 案卷上传</button>
+                <button class="tab" :class="{active: activeTab === 'structure'}" @click="activeTab = 'structure'" :disabled="!currentCase">📋 流程结构</button>
+                <button class="tab" :class="{active: activeTab === 'evidence'}" @click="activeTab = 'evidence'" :disabled="!currentCase">🔗 证据链检测</button>
+                <button class="tab" :class="{active: activeTab === 'discretion'}" @click="activeTab = 'discretion'" :disabled="!currentCase">⚖️ 裁量基准</button>
+                <button class="tab" :class="{active: activeTab === 'similar'}" @click="activeTab = 'similar'" :disabled="!currentCase">📚 相似案例</button>
+                <button class="tab" :class="{active: activeTab === 'risk'}" @click="activeTab = 'risk'" :disabled="!currentCase">📊 风险评估</button>
+                <button class="tab" :class="{active: activeTab === 'report'}" @click="activeTab = 'report'" :disabled="!currentCase">📑 合规报告</button>
+            </div>
+            
+            <!-- 案卷上传 -->
+            <div v-if="activeTab === 'upload'" class="card">
+                <h2 class="card-title">📤 上传案卷</h2>
+                <div class="grid grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label>案件编号</label>
+                            <input v-model="caseForm.caseNumber" placeholder="例如: (X)罚字[2024]001号" />
+                        </div>
+                        <div class="form-group">
+                            <label>案件类型</label>
+                            <select v-model="caseForm.caseType">
+                                <option value="行政处罚">行政处罚</option>
+                                <option value="行政强制">行政强制</option>
+                                <option value="行政许可">行政许可</option>
+                                <option value="行政征收">行政征收</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>立案日期</label>
+                            <input v-model="caseForm.filingDate" type="date" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>案卷内容（粘贴完整案卷文本）</label>
+                        <textarea v-model="caseForm.content" placeholder="请粘贴完整的案卷文本内容，包括：
+- 立案信息
+- 调查笔录
+- 证据材料清单
+- 违法事实认定
+- 行政处罚告知
+- 处罚决定书
+- 送达凭证等"></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-primary" @click="uploadCase" :disabled="loading">
+                    {{ loading ? '上传中...' : '上传并分析' }}
+                </button>
+                
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在分析案卷，请稍候...</p>
+                </div>
+            </div>
+            
+            <!-- 流程结构 -->
+            <div v-if="activeTab === 'structure'" class="card">
+                <h2 class="card-title">📋 案卷流程结构（虚拟流程坐标）</h2>
+                <div v-if="analysisResult.parsed_nodes">
+                    <div class="grid grid-4">
+                        <div v-for="node in analysisResult.parsed_nodes.nodes" :key="node.node_id" 
+                             class="timeline-item" :class="{'has-issue': node.issues && node.issues.length > 0}">
+                            <div class="node-name">{{ node.name }}</div>
+                            <div class="node-content">{{ node.content }}</div>
+                            <div v-if="node.date" style="font-size:12px;color:#999;margin-top:4px;">📅 {{ node.date }}</div>
+                            <div v-for="issue in node.issues" :key="issue" class="issue-tag">⚠️ {{ issue }}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;padding:16px;background:#e3f2fd;border-radius:8px;">
+                        <strong>流程完整性:</strong> {{ analysisResult.parsed_nodes.completeness.score }}%
+                        <span v-if="!analysisResult.parsed_nodes.completeness.is_complete">
+                            - 缺失节点: {{ analysisResult.parsed_nodes.completeness.missing_nodes.join(', ') }}
+                        </span>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>暂无流程结构数据</p>
+                </div>
+            </div>
+            
+            <!-- 证据链检测 -->
+            <div v-if="activeTab === 'evidence'" class="card">
+                <h2 class="card-title">🔗 证据链完整性检测</h2>
+                <div v-if="analysisResult.evidence_result">
+                    <div class="evidence-chain">
+                        <div class="chain-node" :class="{'incomplete': !analysisResult.evidence_result.chain_completeness.missing_elements.includes('违法事实')}">
+                            <div>🎯</div>
+                            <div>违法事实</div>
+                        </div>
+                        <div class="chain-arrow">→</div>
+                        <div class="chain-node" :class="{'incomplete': !analysisResult.evidence_result.chain_completeness.missing_elements.includes('证据材料')}">
+                            <div>📄</div>
+                            <div>证据材料</div>
+                        </div>
+                        <div class="chain-arrow">→</div>
+                        <div class="chain-node" :class="{'incomplete': !analysisResult.evidence_result.chain_completeness.missing_elements.includes('法律依据')}">
+                            <div>⚖️</div>
+                            <div>法律依据</div>
+                        </div>
+                        <div class="chain-arrow">→</div>
+                        <div class="chain-node" :class="{'incomplete': !analysisResult.evidence_result.chain_completeness.missing_elements.includes('处罚结果')}">
+                            <div>📝</div>
+                            <div>处罚结果</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-2" style="margin-top:20px;">
+                        <div>
+                            <h3 style="margin-bottom:12px;">证据链评分</h3>
+                            <div class="score-display">
+                                <div class="score-number">{{ analysisResult.evidence_result.score }}分</div>
+                                <div class="score-label">满分100分</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom:12px;">证据充分性</h3>
+                            <p>证据类型: {{ analysisResult.evidence_result.evidence_sufficiency.type_diversity }}种</p>
+                            <p>证据数量: {{ analysisResult.evidence_result.evidence_sufficiency.evidence_count }}项</p>
+                            <p>高优先级占比: {{ (analysisResult.evidence_result.evidence_sufficiency.high_priority_ratio * 100).toFixed(1) }}%</p>
+                        </div>
+                    </div>
+                    
+                    <div v-if="analysisResult.evidence_result.issues.length > 0" style="margin-top:20px;">
+                        <h3 style="margin-bottom:12px;">发现的问题</h3>
+                        <ul class="issue-list">
+                            <li v-for="(issue, idx) in analysisResult.evidence_result.issues" :key="idx" 
+                                class="issue-item" :class="issue.severity">
+                                <div class="issue-type">{{ issue.type === 'evidence_chain_incomplete' ? '🔴 证据链不完整' : issue.type }}</div>
+                                <div class="issue-message">{{ issue.message }}</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">🔗</div>
+                    <p>暂无证据链检测数据</p>
+                </div>
+            </div>
+            
+            <!-- 裁量基准 -->
+            <div v-if="activeTab === 'discretion'" class="card">
+                <h2 class="card-title">⚖️ 裁量基准匹配</h2>
+                <div v-if="analysisResult.discretion_result">
+                    <div class="grid grid-2">
+                        <div>
+                            <h3 style="margin-bottom:12px;">匹配结果</h3>
+                            <div style="padding:16px;background:#f8f9fa;border-radius:8px;">
+                                <p><strong>处罚类型:</strong> {{ analysisResult.discretion_result.penalty_type }}</p>
+                                <p><strong>实际罚款:</strong> {{ analysisResult.discretion_result.amount || '未明确' }}元</p>
+                                <p><strong>裁量基准:</strong> {{ analysisResult.discretion_result.benchmark_min || 0 }} ~ {{ analysisResult.discretion_result.benchmark_max || '未明确' }}元</p>
+                                <p><strong>匹配等级:</strong> 
+                                    <span :class="{'risk-high': analysisResult.discretion_result.match_level === 'abnormal' || analysisResult.discretion_result.match_level === 'poor',
+                                                   'risk-medium': analysisResult.discretion_result.match_level === 'acceptable',
+                                                   'risk-low': analysisResult.discretion_result.match_level === 'excellent' || analysisResult.discretion_result.match_level === 'good'}">
+                                        {{ analysisResult.discretion_result.match_level }}
+                                    </span>
+                                </p>
+                                <p v-if="analysisResult.discretion_result.deviation !== null">
+                                    <strong>裁量偏差:</strong> 
+                                    <span :class="{'risk-high': Math.abs(analysisResult.discretion_result.deviation) > 0.3, 'risk-medium': Math.abs(analysisResult.discretion_result.deviation) > 0.2, 'risk-low': Math.abs(analysisResult.discretion_result.deviation) <= 0.2}">
+                                        {{ (analysisResult.discretion_result.deviation * 100).toFixed(1) }}%
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom:12px;">裁量因素</h3>
+                            <div v-if="Object.keys(analysisResult.discretion_result.discretion_factors || {}).length > 0">
+                                <div v-for="(factor, key) in analysisResult.discretion_result.discretion_factors" :key="key" 
+                                     style="padding:8px;margin-bottom:8px;background:#e8f5e9;border-radius:4px;">
+                                    <strong>{{ key }}:</strong> {{ factor.level }} (权重: {{ factor.weight }})
+                                </div>
+                            </div>
+                            <div v-else style="color:#999;">未检测到裁量因素</div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="analysisResult.discretion_result.is_abnormal" class="risk-badge risk-high" style="margin-top:16px;">
+                        ⚠️ 裁量幅度异常
+                    </div>
+                    
+                    <div v-if="analysisResult.discretion_result.issues.length > 0" style="margin-top:20px;">
+                        <h3 style="margin-bottom:12px;">裁量问题</h3>
+                        <ul class="issue-list">
+                            <li v-for="(issue, idx) in analysisResult.discretion_result.issues" :key="idx" 
+                                class="issue-item" :class="issue.severity">
+                                <div class="issue-message">{{ issue.message }}</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">⚖️</div>
+                    <p>暂无裁量基准数据</p>
+                </div>
+            </div>
+            
+            <!-- 相似案例 -->
+            <div v-if="activeTab === 'similar'" class="card">
+                <h2 class="card-title">📚 同案相似度检索</h2>
+                <div v-if="analysisResult.similarity_result && analysisResult.similarity_result.similar_cases && analysisResult.similarity_result.similar_cases.length > 0">
+                    <div v-for="(caseItem, idx) in analysisResult.similarity_result.similar_cases" :key="idx" class="similar-case">
+                        <div class="similar-case-header">
+                            <span><strong>相似案例 #{{ idx + 1 }}</strong> (案件ID: {{ caseItem.case_id }})</span>
+                            <span class="similarity-score">{{ (caseItem.similarity_score * 100).toFixed(1) }}%</span>
+                        </div>
+                        <div style="font-size:12px;color:#666;">
+                            匹配关键词: {{ caseItem.keywords_matched ? caseItem.keywords_matched.slice(0, 5).join(', ') : '无' }}
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">📚</div>
+                    <p>暂无相似案例数据</p>
+                </div>
+            </div>
+            
+            <!-- 风险评估 -->
+            <div v-if="activeTab === 'risk'" class="card">
+                <h2 class="card-title">📊 多维风险熵评估</h2>
+                <div v-if="riskReport">
+                    <div class="grid grid-2">
+                        <div>
+                            <div style="text-align:center;padding:30px;background:linear-gradient(135deg,#1a73e8,#0d47a1);border-radius:12px;color:white;">
+                                <div style="font-size:64px;font-weight:700;">{{ riskReport.risk_assessment.total_score }}</div>
+                                <div style="font-size:18px;margin-top:8px;">综合风险评分</div>
+                            </div>
+                            <div style="text-align:center;margin-top:16px;">
+                                <span class="risk-badge" :class="{'risk-high': riskReport.risk_assessment.risk_level === '重大瑕疵',
+                                                            'risk-medium': riskReport.risk_assessment.risk_level === '一般瑕疵',
+                                                            'risk-low': riskReport.risk_assessment.risk_level === '格式问题' || riskReport.risk_assessment.risk_level === '基本合规'}">
+                                    {{ riskReport.risk_assessment.risk_level }}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin-bottom:12px;">五维风险雷达</h3>
+                            <canvas ref="radarCanvas" width="300" height="300"></canvas>
+                            <div class="grid grid-3" style="margin-top:16px;">
+                                <div v-for="(label, idx) in riskReport.risk_assessment.radar_chart.labels" :key="idx" 
+                                     style="text-align:center;padding:8px;background:#f8f9fa;border-radius:4px;">
+                                    <div style="font-size:12px;color:#666;">{{ label }}</div>
+                                    <div style="font-size:18px;font-weight:600;color:#1a73e8;">{{ riskReport.risk_assessment.radar_chart.data[idx] || 0 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:24px;">
+                        <h3 style="margin-bottom:12px;">问题清单</h3>
+                        <ul class="issue-list">
+                            <li v-for="(issue, idx) in riskReport.issues_list" :key="idx" 
+                                class="issue-item" :class="issue.severity">
+                                <div class="issue-type">[{{ issue.category }}] {{ issue.type }}</div>
+                                <div class="issue-message">{{ issue.description }}</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>暂无风险评估数据</p>
+                </div>
+            </div>
+            
+            <!-- 合规报告 -->
+            <div v-if="activeTab === 'report'" class="card">
+                <h2 class="card-title">📑 合规报告</h2>
+                <div v-if="riskReport">
+                    <div class="report-header">
+                        <h2>📋 行政执法案卷合规评查报告</h2>
+                        <p>报告编号: {{ riskReport.report_id }}</p>
+                        <p>生成时间: {{ riskReport.generated_at }}</p>
+                    </div>
+                    
+                    <div class="grid grid-2" style="margin-bottom:24px;">
+                        <div class="conclusion-box">
+                            <h4>案件信息</h4>
+                            <p><strong>案件编号:</strong> {{ riskReport.case_info.case_number }}</p>
+                            <p><strong>案件类型:</strong> {{ riskReport.case_info.case_type }}</p>
+                            <p><strong>立案日期:</strong> {{ riskReport.case_info.filing_date }}</p>
+                        </div>
+                        <div class="conclusion-box" :style="{background: riskReport.executive_summary.is_qualified ? '#e8f5e9' : '#ffebee', borderColor: riskReport.executive_summary.is_qualified ? '#2e7d32' : '#c62828'}">
+                            <h4>综合评定</h4>
+                            <p style="font-size:20px;font-weight:600;">{{ riskReport.executive_summary.risk_level }}</p>
+                            <p style="margin-top:8px;">{{ riskReport.executive_summary.summary }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-section">
+                        <h3>📊 风险评估</h3>
+                        <div style="padding:16px;background:#f8f9fa;border-radius:8px;">
+                            <p><strong>综合风险评分:</strong> {{ riskReport.risk_assessment.total_score }}分</p>
+                            <p><strong>风险等级:</strong> {{ riskReport.risk_assessment.risk_level }}</p>
+                            <p><strong>合规判定:</strong> {{ riskReport.executive_summary.is_qualified ? '✅ 合规' : '❌ 不合规' }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-section" v-if="riskReport.issues_list && riskReport.issues_list.length > 0">
+                        <h3>⚠️ 问题清单</h3>
+                        <ul class="issue-list">
+                            <li v-for="(issue, idx) in riskReport.issues_list" :key="idx" 
+                                class="issue-item" :class="issue.severity">
+                                <div class="issue-type">[{{ issue.category }}] {{ issue.rule_id }}</div>
+                                <div class="issue-message">{{ issue.description }}</div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="report-section" v-if="riskReport.responsibility_nodes && riskReport.responsibility_nodes.length > 0">
+                        <h3>👤 责任节点</h3>
+                        <div class="grid grid-3">
+                            <div v-for="(node, idx) in riskReport.responsibility_nodes" :key="idx" 
+                                 style="padding:16px;background:#fff3e0;border-radius:8px;border-left:4px solid #ef6c00;">
+                                <div style="font-weight:600;color:#ef6c00;">{{ node.node }}</div>
+                                <div style="font-size:14px;margin-top:4px;"><strong>责任人:</strong> {{ node.responsible_role }}</div>
+                                <div style="font-size:14px;color:#666;margin-top:4px;">{{ node.issue }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="report-section" v-if="riskReport.rectification_suggestions && riskReport.rectification_suggestions.length > 0">
+                        <h3>🔧 整改建议</h3>
+                        <div v-for="(suggestion, idx) in riskReport.rectification_suggestions" :key="idx" 
+                             style="padding:16px;margin-bottom:12px;background:#e3f2fd;border-radius:8px;border-left:4px solid #1a73e8;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span class="risk-badge" :class="{'risk-high': suggestion.priority === '高', 'risk-medium': suggestion.priority === '中', 'risk-low': suggestion.priority === '低'}">
+                                    {{ suggestion.priority }}优先级
+                                </span>
+                                <span style="font-weight:600;color:#1a73e8;">[{{ suggestion.category }}]</span>
+                            </div>
+                            <p style="margin-top:8px;">{{ suggestion.suggestion }}</p>
+                            <p style="margin-top:4px;font-size:12px;color:#666;"><strong>建议行动:</strong> {{ suggestion.action }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-section">
+                        <h3>📌 结论</h3>
+                        <div class="conclusion-box" :style="{background: riskReport.conclusion.verdict === '合规' || riskReport.conclusion.verdict === '基本合规' ? '#e8f5e9' : '#fff3e0'}">
+                            <h4>{{ riskReport.conclusion.verdict }}</h4>
+                            <p style="margin-top:8px;">{{ riskReport.conclusion.recommendation }}</p>
+                            <div style="margin-top:12px;">
+                                <strong>后续步骤:</strong>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                                    <span v-for="(step, idx) in riskReport.conclusion.next_steps" :key="idx" 
+                                          style="padding:6px 12px;background:#1a73e8;color:white;border-radius:4px;font-size:12px;">
+                                        {{ step }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <div class="empty-state-icon">📑</div>
+                    <p>暂无报告数据</p>
+                </div>
+            </div>
+            
+            <!-- 历史案件列表 -->
+            <div class="card">
+                <h2 class="card-title">📂 历史案件</h2>
+                <div v-if="caseList.length > 0">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f8f9fa;">
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">ID</th>
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">案件编号</th>
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">案件类型</th>
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">立案日期</th>
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">状态</th>
+                                <th style="padding:12px;text-align:left;border-bottom:2px solid #e3f2fd;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="caseItem in caseList" :key="caseItem.id" style="border-bottom:1px solid #f0f0f0;">
+                                <td style="padding:12px;">{{ caseItem.id }}</td>
+                                <td style="padding:12px;">{{ caseItem.case_number }}</td>
+                                <td style="padding:12px;">{{ caseItem.case_type }}</td>
+                                <td style="padding:12px;">{{ caseItem.filing_date || '未知' }}</td>
+                                <td style="padding:12px;">
+                                    <span class="risk-badge" :class="{'risk-low': caseItem.status === 'analyzed', 'risk-medium': caseItem.status === 'pending'}">
+                                        {{ caseItem.status }}
+                                    </span>
+                                </td>
+                                <td style="padding:12px;">
+                                    <button class="btn btn-secondary" @click="loadCase(caseItem.id)" style="padding:6px 12px;font-size:12px;">查看</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-else class="empty-state">
+                    <p>暂无历史案件</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createApp, ref, onMounted, nextTick, watch } = Vue;
+        
+        createApp({
+            setup() {
+                const API_BASE = 'http://localhost:8015/api';
+                const activeTab = ref('upload');
+                const loading = ref(false);
+                const currentCase = ref(null);
+                const caseList = ref([]);
+                const analysisResult = ref({});
+                const riskReport = ref(null);
+                const radarCanvas = ref(null);
+                
+                const caseForm = ref({
+                    caseNumber: '',
+                    caseType: '行政处罚',
+                    filingDate: '',
+                    content: ''
+                });
+                
+                const uploadCase = async () => {
+                    if (!caseForm.value.caseNumber || !caseForm.value.content) {
+                        alert('请填写案件编号和案卷内容');
+                        return;
+                    }
+                    
+                    loading.value = true;
+                    try {
+                        const response = await axios.post(`${API_BASE}/upload_case`, {
+                            case_number: caseForm.value.caseNumber,
+                            case_type: caseForm.value.caseType,
+                            content: caseForm.value.content,
+                            filing_date: caseForm.value.filingDate
+                        });
+                        
+                        currentCase.value = response.data.case_id;
+                        
+                        // 自动分析
+                        await analyzeCase(response.data.case_id);
+                        
+                        // 刷新列表
+                        await loadCaseList();
+                        
+                        activeTab.value = 'risk';
+                    } catch (error) {
+                        console.error('上传失败:', error);
+                        alert('上传失败: ' + (error.response?.data?.detail || error.message));
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+                
+                const analyzeCase = async (caseId) => {
+                    try {
+                        const response = await axios.post(`${API_BASE}/analyze_case`, null, {
+                            params: { case_id: caseId }
+                        });
+                        analysisResult.value = response.data;
+                        
+                        // 获取风险报告
+                        await getRiskReport(caseId);
+                    } catch (error) {
+                        console.error('分析失败:', error);
+                        alert('分析失败: ' + (error.response?.data?.detail || error.message));
+                    }
+                };
+                
+                const getRiskReport = async (caseId) => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/get_risk_report/${caseId}`);
+                        riskReport.value = response.data;
+                        
+                        await nextTick();
+                        drawRadarChart();
+                    } catch (error) {
+                        console.error('获取报告失败:', error);
+                    }
+                };
+                
+                const loadCase = async (caseId) => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/get_case/${caseId}`);
+                        currentCase.value = caseId;
+                        await analyzeCase(caseId);
+                        activeTab.value = 'risk';
+                    } catch (error) {
+                        console.error('加载案件失败:', error);
+                        alert('加载失败: ' + (error.response?.data?.detail || error.message));
+                    }
+                };
+                
+                const loadCaseList = async () => {
+                    // 获取所有案件（通过audit logs）
+                    try {
+                        const response = await axios.get(`${API_BASE}/audit_logs`, {
+                            params: { limit: 100 }
+                        });
+                        const logs = response.data.logs || [];
+                        const caseIds = [...new Set(logs.filter(l => l.action === 'upload_case' || l.action === 'analyze_case').map(l => l.target_id))];
+                        
+                        // 尝试从health接口获取信息
+                        caseList.value = [];
+                        for (const id of caseIds) {
+                            try {
+                                const resp = await axios.get(`${API_BASE}/get_case/${id}`);
+                                caseList.value.push(resp.data);
+                            } catch (e) {}
+                        }
+                    } catch (error) {
+                        console.error('加载列表失败:', error);
+                    }
+                };
+                
+                const drawRadarChart = () => {
+                    if (!radarCanvas.value || !riskReport.value) return;
+                    
+                    const canvas = radarCanvas.value;
+                    const ctx = canvas.getContext('2d');
+                    const centerX = 150;
+                    const centerY = 150;
+                    const radius = 100;
+                    
+                    ctx.clearRect(0, 0, 300, 300);
+                    
+                    const labels = riskReport.value.risk_assessment.radar_chart.labels;
+                    const data = riskReport.value.risk_assessment.radar_chart.data;
+                    const n = labels.length;
+                    const angleStep = (2 * Math.PI) / n;
+                    
+                    // 绘制背景网格
+                    ctx.strokeStyle = '#e0e0e0';
+                    ctx.lineWidth = 1;
+                    for (let level = 1; level <= 5; level++) {
+                        ctx.beginPath();
+                        for (let i = 0; i <= n; i++) {
+                            const angle = (i * angleStep) - Math.PI / 2;
+                            const r = (radius * level) / 5;
+                            const x = centerX + r * Math.cos(angle);
+                            const y = centerY + r * Math.sin(angle);
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+                    }
+                    
+                    // 绘制轴线
+                    for (let i = 0; i < n; i++) {
+                        const angle = (i * angleStep) - Math.PI / 2;
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
+                        ctx.stroke();
+                        
+                        // 绘制标签
+                        const labelX = centerX + (radius + 20) * Math.cos(angle);
+                        const labelY = centerY + (radius + 20) * Math.sin(angle);
+                        ctx.fillStyle = '#333';
+                        ctx.font = '12px Microsoft YaHei';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(labels[i] || '', labelX, labelY);
+                    }
+                    
+                    // 绘制数据区域
+                    ctx.beginPath();
+                    for (let i = 0; i < n; i++) {
+                        const angle = (i * angleStep) - Math.PI / 2;
+                        const value = (data[i] || 0) / 100;
+                        const x = centerX + radius * value * Math.cos(angle);
+                        const y = centerY + radius * value * Math.sin(angle);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(26, 115, 232, 0.3)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#1a73e8';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // 绘制数据点
+                    for (let i = 0; i < n; i++) {
+                        const angle = (i * angleStep) - Math.PI / 2;
+                        const value = (data[i] || 0) / 100;
+                        const x = centerX + radius * value * Math.cos(angle);
+                        const y = centerY + radius * value * Math.sin(angle);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = '#1a73e8';
+                        ctx.fill();
+                    }
+                };
+                
+                const checkHealth = async () => {
+                    try {
+                        await axios.get(`${API_BASE}/health`);
+                        console.log('API服务正常');
+                    } catch (error) {
+                        console.warn('API服务未启动或无法连接');
+                    }
+                };
+                
+                onMounted(() => {
+                    checkHealth();
+                    loadCaseList();
+                });
+                
+                return {
+                    activeTab,
+                    loading,
+                    currentCase,
+                    caseList,
+                    analysisResult,
+                    riskReport,
+                    caseForm,
+                    uploadCase,
+                    loadCase,
+                    radarCanvas
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
