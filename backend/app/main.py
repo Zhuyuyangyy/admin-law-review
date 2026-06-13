@@ -29,7 +29,7 @@ async def review_case(req: ReviewCaseRequest):
     evidence_types = {e["evidence_id"]: e.get("type", "unknown") for e in req.evidence}
     fact_coverage = {}
     for fact in req.facts:
-        supporting = [e["evidence_id"] for e in req.evidence if e.get("description", "") and any(word in fact for word in e.get("description", "").split()[:3]))]
+        supporting = [e["evidence_id"] for e in req.evidence if e.get("description", "") and any(word in fact for word in e.get("description", "").split()[:3])]
         fact_coverage[fact] = {"supporting_evidence": supporting, "coverage_score": round(sum(evidence_weights.get(eid, 0) for eid in supporting) / max(len(supporting), 1), 3)}
     evidence_assessment = []
     for e in req.evidence:

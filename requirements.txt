@@ -1,5 +1,5 @@
-# AdminLawReview Backend Dependencies
-# =====================================
+# AdminLawReview - Production Dependencies
+# ==========================================
 
 # Web Framework
 fastapi==0.109.2
@@ -20,6 +20,14 @@ scikit-learn==1.4.1
 
 # HTTP Client
 httpx==0.26.0
+
+# Testing
+pytest==8.0.2
+pytest-cov==4.1.0
+pytest-asyncio==0.23.5
+
+# Linting
+ruff==0.2.2
 
 # Production Server
 gunicorn==21.2.0

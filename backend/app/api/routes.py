@@ -24,14 +24,26 @@ from app.services.report_generator import ReportGenerator
 
 router = APIRouter()
 
-# 全局服务实例
-case_parser = CaseParser()
-evidence_chain_checker = EvidenceChainChecker()
+# --- 无状态/全局共享服务（无实例间可变状态冲突） ---
 discretion_benchmark = DiscretionBenchmark()
 similarity_retriever = CaseSimilarityRetriever()
-procedure_checker = ProcedureLegalChecker()
 risk_scorer = CaseRiskScorer()
 report_generator = ReportGenerator()
+
+
+def _new_case_parser() -> CaseParser:
+    """每次请求创建新实例，避免 self.nodes 跨请求污染。"""
+    return CaseParser()
+
+
+def _new_evidence_checker() -> EvidenceChainChecker:
+    """每次请求创建新实例，避免 self.issues / self.chain_elements 跨请求污染。"""
+    return EvidenceChainChecker()
+
+
+def _new_procedure_checker() -> ProcedureLegalChecker:
+    """每次请求创建新实例，避免 self.issues / self.timeline 跨请求污染。"""
+    return ProcedureLegalChecker()
 
 # 初始化数据库
 try:
@@ -96,10 +108,12 @@ async def analyze_case(case_id: int):
         case_type = case["case_type"]
         filing_date = case["filing_date"]
         
-        # 解析案卷结构
+        # 解析案卷结构（每次请求新建实例，避免并发状态污染）
+        case_parser = _new_case_parser()
         parsed_nodes = case_parser.parse(case_content, case_type)
-        
+
         # 检测证据链
+        evidence_chain_checker = _new_evidence_checker()
         evidence_result = evidence_chain_checker.check(case_content, parsed_nodes)
         
         # 获取处罚信息
@@ -117,6 +131,7 @@ async def analyze_case(case_id: int):
         discretion_result = discretion_benchmark.match(case_content, penalty_info)
         
         # 程序合法性检测
+        procedure_checker = _new_procedure_checker()
         procedure_result = procedure_checker.check(case_content, parsed_nodes)
         
         # 同案相似度检测
@@ -181,11 +196,13 @@ async def check_evidence_chain(case_id: int):
             conn.close()
             raise HTTPException(status_code=404, detail="案件不存在")
         
+        case_parser = _new_case_parser()
         parsed_nodes = case_parser.parse(case["content"], case["case_type"])
+        evidence_chain_checker = _new_evidence_checker()
         result = evidence_chain_checker.check(case["content"], parsed_nodes)
-        
+
         conn.close()
-        
+
         return {
             "case_id": case_id,
             "is_complete": result["is_complete"],
@@ -287,11 +304,13 @@ async def check_procedure(case_id: int):
             conn.close()
             raise HTTPException(status_code=404, detail="案件不存在")
         
+        case_parser = _new_case_parser()
         parsed_nodes = case_parser.parse(case["content"], case["case_type"])
+        procedure_checker = _new_procedure_checker()
         result = procedure_checker.check(case["content"], parsed_nodes)
-        
+
         conn.close()
-        
+
         return {
             "case_id": case_id,
             "is_legal": result["is_legal"],
@@ -372,10 +391,11 @@ async def get_case(case_id: int):
             raise HTTPException(status_code=404, detail="案件不存在")
         
         # 解析案卷结构
+        case_parser = _new_case_parser()
         parsed_nodes = case_parser.parse(case["content"], case["case_type"])
-        
+
         conn.close()
-        
+
         return {
             "id": case["id"],
             "case_number": case["case_number"],
